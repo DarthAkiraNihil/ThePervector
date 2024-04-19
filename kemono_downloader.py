@@ -1,23 +1,35 @@
 from config import config
+from pathlib import Path
 
 import requests
 import urllib.request
 import urllib.error
-from pathlib import Path
+import utils
 import time
 
 
 class KemonoDownloader:
 
-    def __init__(self, provider: str, service: str, user_id: int):
+    def __init__(self, provider: str, service: str, user_id: int, update_data: dict):
         self.__provider = provider
         self.__service = service
         self.__user_id = user_id
         self.__posts_data = []
         self.__post_count = 0
+        self.__update_data = update_data
         self.__fetch_data()
 
     def __fetch_data(self):
+
+        utils.edit_telegram_message(
+            self.__update_data['token'],
+            self.__update_data['chat_id'],
+            self.__update_data['update_message'],
+            f"Running job_id_{self.__update_data['update_message']}."
+            f"creator_id: {self.__update_data['creator_id']},"
+            f"from: {self.__update_data['provider']}/{self.__update_data['service']}\n"
+            f'Status: fetching posts'
+        )
 
         page = 0
 
@@ -30,14 +42,10 @@ class KemonoDownloader:
 
             posts = None
 
-            if not response:
-                print('fuck')
-                print(response.status_code)
-                print(response.headers['Retry-After'])
-            else:
+            if response:
                 posts = response.json()
 
-            if len(posts) == 0:
+            if posts is None or len(posts) == 0:
                 break
 
             for post in posts:
@@ -52,7 +60,16 @@ class KemonoDownloader:
 
             page += 1
 
-        print(f"collected {len(self.__posts_data)} posts")
+        utils.edit_telegram_message(
+            self.__update_data['token'],
+            self.__update_data['chat_id'],
+            self.__update_data['update_message'],
+            f"Running job_id_{self.__update_data['update_message']}."
+            f"creator_id: {self.__update_data['creator_id']},"
+            f"from: {self.__update_data['provider']}/{self.__update_data['service']}\n"
+            "Status: collected"
+            f'Collected {len(self.__posts_data)} posts'
+        )
 
     def get_post_count(self):
         return len(self.__posts_data)

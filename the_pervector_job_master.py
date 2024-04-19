@@ -1,7 +1,10 @@
-from telegram import ForceReply, Update
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+import subprocess
+
+from telegram import Update
+from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
 import logging
+from config import config
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -14,43 +17,36 @@ logger = logging.getLogger(__name__)
 
 class ThePervectorJobMaster:
 
-    def __init__(self):
-        """Start the bot."""
-        # Create the Application and pass it your bot's token.
-        self.__application = Application.builder().token("").build()
+    def __init__(self, token, chat_id):
+        self.__last_job_id = 0
+        self.__token = token
+        self.__chat_id = chat_id
+        self.__application = Application.builder().token(self.__token).build()
 
-        # on different commands - answer in Telegram
-        self.__application.add_handler(CommandHandler("start", self.__start))
-        self.__application.add_handler(CommandHandler("help", self.__help_command))
+        self.__application.add_handler(MessageHandler(filters.TEXT, self.__spawn_job))
 
-        # on non command i.e message - echo the message on Telegram
-        self.__application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.__echo))
+    async def __spawn_job(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
-        # Run the bot until the user presses Ctrl-C
-
-
-    async def __start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Send a message when the command /start is issued."""
-        user = update.effective_user
-        await update.message.reply_html(
-            rf"Hi {user.mention_html()}!",
-            reply_markup=ForceReply(selective=True),
+        query = update.message.text.split()
+        subprocess.Popen(
+            [
+                'python',
+                'the_pervector_job_executor.py',
+                f'{self.__last_job_id}',
+                self.__token,
+                self.__chat_id,
+                query[0],
+                query[1],
+                query[2]
+            ]
         )
 
-
-    async def __help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Send a message when the command /help is issued."""
-        await update.message.reply_text("Help!")
-
-
-    async def __echo(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Echo the user message."""
-        await update.message.reply_text(update.message.text)
+        self.__last_job_id += 1
 
     def launch(self):
         self.__application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
-    jm = ThePervectorJobMaster()
+    jm = ThePervectorJobMaster(config['TOKEN'], config['CHAT_ID'])
     jm.launch()

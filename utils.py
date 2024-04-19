@@ -53,6 +53,39 @@ def merge_all(mergefiles_dir: str = '.'):
             merge(f)
 
 
+def send_telegram_message(
+        token: str,
+        chat_id: str,
+        text: str
+):
+    url_request_template = f'https://api.telegram.org/bot{token}'
+
+    return requests.post(
+        f'{url_request_template}/sendMessage',
+        data={
+            'chat_id': chat_id,
+            'text': text
+        }
+    ).json()['result']['message_id']
+
+
+def edit_telegram_message(
+        token: str,
+        chat_id: str,
+        message_id: int,
+        text: str
+):
+    url_request_template = f'https://api.telegram.org/bot{token}'
+
+    requests.post(
+        f'{url_request_template}/editMessageText',
+        data={
+            'chat_id': chat_id,
+            'message_id': message_id,
+            'text': text
+        }
+    )
+
 def dump_to_telegram(
         token: str,
         chat_id: str,
@@ -65,7 +98,7 @@ def dump_to_telegram(
 
     def send_file(file_path):
         return requests.post(
-            f'{url_request_template}/sendDocument?',
+            f'{url_request_template}/sendDocument',
             data={
                 'chat_id': chat_id
             },
@@ -75,13 +108,13 @@ def dump_to_telegram(
             stream=True
         ).status_code
 
-    requests.post(
+    print(requests.post(
         f'{url_request_template}/sendMessage',
         data={
             'chat_id': chat_id,
             'text': begin_message
         }
-    )
+    ).status_code)
 
     if is_dir:
         for f in os.listdir(path):
